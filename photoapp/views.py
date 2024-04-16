@@ -147,7 +147,7 @@ def yolo_image_process(request):
     version2 = project2.version(5)
     
     model1 = project1.version(1).model
-    model2 = project2.version(5).model
+    model2 = project2.version(3).model
     
     uploaded_file = request.FILES['image']
         
@@ -157,7 +157,7 @@ def yolo_image_process(request):
     #image = cv2.imread(file_path)
     
     response1 = model1.predict(file_path, confidence = 80).json()
-    response2 = model2.predict(file_path, confidence = 15).json()
+    response2 = model2.predict(file_path, confidence = 8).json()
     
     response_final = {}
     temp = set()
