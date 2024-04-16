@@ -7,6 +7,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from rest_framework.response import Response
 from rest_framework import status
+from roboflow import Roboflow
 
 
 # Create your views here.
@@ -135,4 +136,53 @@ def process_image(request):
     print("volume  = ", volume)
 
 
+@api_view(['POST'])
+def yolo_image_process(request):
+    rf = Roboflow(api_key="aQloKigxucbbRkA4uql9")
     
+    project1 = rf.workspace("constructiondataset").project("debris-detection-ik3o3")
+    project2 = rf.workspace("constructiondataset").project("cd-material-detection")
+    
+    version1 = project1.version(1)
+    version2 = project2.version(5)
+    
+    model1 = project1.version(1).model
+    model2 = project2.version(5).model
+    
+    uploaded_file = request.FILES['image']
+        
+    file_name = default_storage.save(uploaded_file.name, ContentFile(uploaded_file.read()))
+    file_path = default_storage.path(file_name)
+
+    #image = cv2.imread(file_path)
+    
+    response1 = model1.predict(file_path, confidence = 80).json()
+    response2 = model2.predict(file_path, confidence = 15).json()
+    
+    response_final = {}
+    temp = set()
+
+    # for pred in response1['predictions']:
+    #     response_final['width'] = pred['width']
+    #     response_final['height'] = pred['height']
+        
+    # for pred in response2['predictions']:
+    #     temp.add(pred['class'])
+
+    max_confidence_idx = 0
+    max_confidence = response1['predictions'][0]['confidence']
+    for i, pred in enumerate(response1['predictions']):
+        if pred['confidence'] > max_confidence:
+            max_confidence_idx = i
+            max_confidence = pred['confidence']
+ 
+    max_confidence_pred = response1['predictions'][max_confidence_idx]
+    response_final['width'] = max_confidence_pred['width']
+    response_final['height'] = max_confidence_pred['height']
+ 
+    for pred in response2['predictions']:
+        temp.add(pred['class'])
+        
+    response_final['material'] = temp
+    
+    return Response(response_final)    
